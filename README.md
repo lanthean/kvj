@@ -5,7 +5,7 @@ Lodni denik template + rename/resize script to manage photos
 ## Usage
 ```sh
 Usage ./resize -i /path/to/org [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]
- - note that /path/to/rs is relative to orig (not configurable)
+ - note that /path/to/rs is relative to /path/to/org (not configurable)
 ```
 
 ### /path/to/org

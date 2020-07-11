@@ -54,7 +54,7 @@ function f_s_usage() {
 
     log i " -"
     log i "| Usage $script_name -i /path/to/org [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
-    log i "| - note that /path/to/rs is relative to orig (not configurable)"
+    log i "| - note that /path/to/rs is relative to /path/to/org (not configurable)"
     log i " --"
 }
 function f_get_options(){
