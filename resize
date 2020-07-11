@@ -1,0 +1,185 @@
+#!/bin/bash
+###
+# @Author	Martin Bortel <martin.bortel@gmail.com>
+# @Created	11/07/2020
+# @Updated	11/07/2020
+# 
+# @Package	bash_scripts
+###
+
+function f_s_init(){
+	# def vars
+	handle="resize and rename Janicka's JPGs"
+	script_name=$0
+	N_INPUT_ARGS=$#
+	EXP_ARGS=0
+	
+	ERR=0
+	
+	USAGE=1
+	
+  max_pixels=1024
+  ext=JPG
+
+  ##
+  # Init generic functions
+  path=$(pwd)
+  # LOG_FILE=/path/to/log/file
+  LOG_LEVEL="d"
+  if [ ! -d /opt/generic_bash_functions ];then
+    echo "/opt/generic_bash_functions not found, attemting to clone from lanthean's github"
+	cd /opt
+    sudo git clone https://github.com/lanthean/generic_bash_functions.git
+    cd $path
+    sudo chown -R $USER:staff /opt/generic_bash_functions
+  fi
+  if [ ! -d /opt/generic_bash_functions ];then
+    echo "ERR: github failed"
+    exit 1
+  fi
+  source /opt/generic_bash_functions/generic_bash_functions
+}
+function f_s_bo() {
+  echo "  -"
+}
+function f_s_eo() {
+	if [[ $USAGE == 1 ]];then
+		# if f_s_usage called, do not print eof
+		echo "  -"
+	fi
+}
+function f_s_usage() {
+
+	USAGE=0	# Usage is called, do not print eof
+
+    log i " -"
+    log i "| Usage $script_name -i /path/to/orig [-m (--max_pixels) [1024]] [-e (--img_extention) [JPG]]"
+    log i "| - note that /path/to/rs is relative to orig (not configurable)"
+    log i " --"
+}
+function f_get_options(){
+	#'Options manager: get arguments from cli and parse them'
+	while [[ $# -ge 1 ]]	# -ge (greater or equal) because of --help (does not have pair = therefore in that case $# will be equal to 1)
+    do	#; echo "key: "$1", value: "$2", remaining number: "$#
+		if [[ $2 == "" || $2 == "-"* ]];then
+			ERR="EMPTY_VALUE"
+			ERR_OPT=$1
+			break
+		else
+			case $1 in
+			-i|--input)
+				INPUT="$2/org"
+				OUTPUT="$2/rs"
+				shift
+				;;
+			-m|--max_pixels)
+				max_pixels="$2"
+				shift
+				;;
+        -e|--img_extension)
+				ext="$2"
+				shift
+				;;
+			*)
+				# unknown option
+				ERR="UNKNOWN_OPT"
+				ERR_OPT=$@
+				;;
+			esac
+			shift # past argument or value
+		fi
+	done
+	if [[ $N_INP_ARGS == 0 ]];then
+		ERR="USAGE"
+	elif [[ $ERR == 0 ]]; then # $ERR == False
+		if [[ $INPUT == "" || $OUTPUT == "" ]]; then
+			ERR="BAD_MANDATORY"
+		else
+			# Check if $INPUT exists
+			if [[ ! -d $INPUT ]];then 
+				ERR="INPUT_NOT_A_DIRECTORY"
+			fi
+			# Check if $OUTPUT exists
+			if [[ ! -d $OUTPUT ]];then
+				ERR="OUTPUT_NOT_A_DIRECTORY"
+			fi
+		fi
+	fi
+
+} 
+function f_manage_err(){
+	#'Error manager: take internal error and convert it to sensible output/exit code'
+    case $ERR in
+		"USAGE")
+			f_s_usage
+			;;
+		"UNKNOWN_OPT")
+			log e "Unknown option used, please verify your syntax."
+			log e "Input arguments used: "$@
+			log e "Unknown argument: "$ERR_OPT
+			f_s_usage
+			;;
+		"BAD_MANDATORY")
+			log e "Some mandatory parameter is missing, please consult usage."
+			f_s_usage
+			;;
+		"EMPTY_VALUE")
+			log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
+			f_s_usage
+			;;
+		"INPUT_NOT_A_DIRECTORY")
+			log e "$INPUT path does not exist. Check your INPUT directory."
+			;;
+		"OUTPUT_NOT_A_DIRECTORY")
+			log w "$OUTPUT path does not exist. Creating it for you."
+			[ $(mkdir $OUTPUT) ] && log i "$OUTPUT created"
+			;;
+    *)
+      log e "Unknown error."
+      f_s_usage
+      ;;
+		esac
+    log i "Please take care of above errors and run $0 again"
+}
+
+function resize_in_place {
+  log i "Resize images in place ($OUTPUT)"
+  log d "max_pixels=$max_pixels; ext=$ext"
+  sips -Z $max_pixels $OUTPUT/*.$ext 2>&1 > /dev/null
+}
+function resize {
+  log i "Resize images and store output in $OUTPUT"
+  log d "max_pixels=$max_pixels; ext=$ext"
+  sips -Z $max_pixels $INPUT/*.$ext -o $OUTPUT/
+}
+function copy_first {
+  log i "Copy images to $OUTPUT"
+  cp $INPUT/*.$ext $OUTPUT/
+}
+function rename {
+  log i "Rename B/W images from Canon (_MG* to IMG*)"
+  for f in $(ls $INPUT/*.$ext);do
+    b=$(basename $f)
+    if [[ $b == "_"* ]];then
+      log d " - $INPUT/$b >> $INPUT/I${b:1:${#b}}"
+      mv $INPUT/$b $INPUT/"I${b:1:${#b}}"
+    fi
+  done
+}
+
+#@run the code
+f_s_init $@
+f_s_bo
+
+##
+# If f_get_options used:
+f_get_options $@
+if [[ $ERR == 0 ]];then
+  rename
+  resize
+else
+  f_manage_err
+fi
+f_s_eo
+#EOF
+###
