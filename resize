@@ -53,7 +53,7 @@ function f_s_usage() {
 	USAGE=0	# Usage is called, do not print eof
 
     log i " -"
-    log i "| Usage $script_name -i /path/to/orig [-m (--max_pixels) [1024]] [-e (--img_extention) [JPG]]"
+    log i "| Usage $script_name -i /path/to/org [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
     log i "| - note that /path/to/rs is relative to orig (not configurable)"
     log i " --"
 }
