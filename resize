@@ -2,7 +2,6 @@
 ###
 # @Author	Martin Bortel <martin.bortel@gmail.com>
 # @Created	11/07/2020
-# @Updated	11/07/2020
 # 
 # @Package	bash_scripts
 ###
@@ -20,6 +19,14 @@ function f_s_init(){
 	
   max_pixels=1024
   ext=JPG
+  mov_ext=MOV
+  vext=mp4
+  vcodec=h264
+  acodec=aac
+  
+  in_place=1
+  only_mov=1
+  rename_jpeg=1
 
   ##
   # Init generic functions
@@ -38,33 +45,44 @@ function f_s_init(){
     exit 1
   fi
   source /opt/generic_bash_functions/generic_bash_functions
-}
+	}
 function f_s_bo() {
   echo "  -"
-}
+	}
 function f_s_eo() {
 	if [[ $USAGE == 1 ]];then
 		# if f_s_usage called, do not print eof
 		echo "  -"
 	fi
-}
+	}
 function f_s_usage() {
 
 	USAGE=0	# Usage is called, do not print eof
 
-    log i " -"
-    log i "| Usage $script_name -i /path/to/org [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
-    log i "| - note that /path/to/rs is relative to /path/to/org (not configurable)"
-    log i " --"
-}
+  log i " -"
+  log i "| Usage $script_name -i /path/to/ (org) [--rename_jpeg (only rename *.jpeg files to *.$ext)] [--mov (only convert MOV files)] [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
+  log i "| - note that /path/to/rs is relative to /path/to/ (org) (not configurable)"
+  log i " --"
+	}
 function f_get_options(){
 	#'Options manager: get arguments from cli and parse them'
 	while [[ $# -ge 1 ]]	# -ge (greater or equal) because of --help (does not have pair = therefore in that case $# will be equal to 1)
     do	#; echo "key: "$1", value: "$2", remaining number: "$#
 		if [[ $2 == "" || $2 == "-"* ]];then
-			ERR="EMPTY_VALUE"
-			ERR_OPT=$1
-			break
+      if [[ $1 == "--mov" ]];then
+        only_mov=0
+        shift
+      elif [[ $1 == "--rename_jpeg" ]];then
+        rename_jpeg=0
+        shift
+      elif [[ $1 == "-p" ]] || [[ $1 == "--in_place" ]];then
+        in_place=0
+        shift
+      else
+  			ERR="EMPTY_VALUE"
+  			ERR_OPT=$1
+			  break
+      fi
 		else
 			case $1 in
 			-i|--input)
@@ -76,11 +94,11 @@ function f_get_options(){
 				max_pixels="$2"
 				shift
 				;;
-        -e|--img_extension)
+      -e|--img_extension)
 				ext="$2"
 				shift
 				;;
-			*)
+      *)
 				# unknown option
 				ERR="UNKNOWN_OPT"
 				ERR_OPT=$@
@@ -106,56 +124,70 @@ function f_get_options(){
 		fi
 	fi
 
-} 
+	} 
 function f_manage_err(){
 	#'Error manager: take internal error and convert it to sensible output/exit code'
-    case $ERR in
-		"USAGE")
-			f_s_usage
-			;;
-		"UNKNOWN_OPT")
-			log e "Unknown option used, please verify your syntax."
-			log e "Input arguments used: "$@
-			log e "Unknown argument: "$ERR_OPT
-			f_s_usage
-			;;
-		"BAD_MANDATORY")
-			log e "Some mandatory parameter is missing, please consult usage."
-			f_s_usage
-			;;
-		"EMPTY_VALUE")
-			log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
-			f_s_usage
-			;;
-		"INPUT_NOT_A_DIRECTORY")
-			log e "$INPUT path does not exist. Check your INPUT directory."
-			;;
-		"OUTPUT_NOT_A_DIRECTORY")
-			log w "$OUTPUT path does not exist. Creating it for you."
-			[ $(mkdir $OUTPUT) ] && log i "$OUTPUT created"
-			;;
-    *)
-      log e "Unknown error."
-      f_s_usage
-      ;;
-		esac
-    log i "Please take care of above errors and run $0 again"
-}
-
-function resize_in_place {
-  log i "Resize images in place ($OUTPUT)"
+  case $ERR in
+  "USAGE")
+    f_s_usage
+    ;;
+  "UNKNOWN_OPT")
+    log e "Unknown option used, please verify your syntax."
+    log e "Input arguments used: "$@
+    log e "Unknown argument: "$ERR_OPT
+    f_s_usage
+    ;;
+  "BAD_MANDATORY")
+    log e "Some mandatory parameter is missing, please consult usage."
+    f_s_usage
+    ;;
+  "EMPTY_VALUE")
+    log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
+    f_s_usage
+    ;;
+  "INPUT_NOT_A_DIRECTORY")
+    log e "$INPUT path does not exist. Check your INPUT directory."
+    ;;
+  "OUTPUT_NOT_A_DIRECTORY")
+    log w "$OUTPUT path does not exist. Creating it for you."
+    [ $(mkdir $OUTPUT) ] && log i "$OUTPUT created"
+    ;;
+  *)
+    log e "Unknown error."
+    f_s_usage
+    ;;
+  esac
+  log i "Please take care of above errors and run $0 again"
+	}
+function img_resize_in_place {
+  log i "Resize images in place ($INPUT)"
   log d "max_pixels=$max_pixels; ext=$ext"
-  sips -Z $max_pixels $OUTPUT/*.$ext 2>&1 > /dev/null
-}
-function resize {
+  sips -Z $max_pixels $INPUT/*.$ext
+  }
+function img_resize {
   log i "Resize images and store output in $OUTPUT"
   log d "max_pixels=$max_pixels; ext=$ext"
   sips -Z $max_pixels $INPUT/*.$ext -o $OUTPUT/
-}
+  }
+function mov_convert {
+  log i "Convert MOV files to mp4 and store output in $INPUT"
+  log d "codec=$codec; ext=$mov_ext"
+  for mov in $(ls $INPUT/*.$mov_ext);do
+    mov=$(basename $mov)
+    mov=${mov:0:8}
+    ffmpeg -i $INPUT/$mov.$mov_ext -vcodec $vcodec -acodec $acodec $INPUT/$mov.$vext
+    if [[ $? == 0 ]];then
+      log i "Convert of $mov.$mov_ext was successfull. Deleting the original, leaving only converted $mov.$vext."
+      rm -f $INPUT/$mov.$mov_ext
+    else
+      log e "Convert of $mov.$mov_ext failed."
+    fi
+  done
+  }
 function copy_first {
   log i "Copy images to $OUTPUT"
   cp $INPUT/*.$ext $OUTPUT/
-}
+  }
 function rename {
   log i "Rename B/W images from Canon (_MG* to IMG*)"
   for f in $(ls $INPUT/*.$ext);do
@@ -165,8 +197,19 @@ function rename {
       mv $INPUT/$b $INPUT/"I${b:1:${#b}}"
     fi
   done
-}
-
+	}
+function rename_jpeg {
+  log i "Rename Whatsapp's jpeg"
+  oIFS=$IFS
+  IFS=$'\n'
+  for f in $(ls $INPUT/*.jpeg);do
+    filename="${f##*/}"
+    basename="${filename%.*}"
+    log d "${f} > $INPUT/$basename.$ext"
+    mv "$f" "$INPUT/$basename.$ext"
+  done
+  IFS=$oIFS
+  }
 #@run the code
 f_s_init $@
 f_s_bo
@@ -175,8 +218,21 @@ f_s_bo
 # If f_get_options used:
 f_get_options $@
 if [[ $ERR == 0 ]];then
-  rename
-  resize
+  if [[ $only_mov == 0 ]];then
+    mov_convert
+  else
+    if [[ $rename_jpeg == 0 ]];then
+      rename_jpeg
+    elif [[ $in_place == 0 ]];then
+      rename
+      rename_jpeg
+      img_resize_in_place
+    else
+      rename
+      rename_jpeg
+      img_resize    
+    fi
+  fi
 else
   f_manage_err
 fi
