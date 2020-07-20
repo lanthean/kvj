@@ -30,9 +30,8 @@ Only convert \*.MOV files to \*.mp4
 Maximum height/width of resized photo.
 
 ### img_extension
-Photo files extension (e.g. 'JPG')
+Input/original photo files extension (e.g. 'JPG')
 
 
 ## Author
 https://github.com/lanthean/kvj
-
