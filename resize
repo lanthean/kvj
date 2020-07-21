@@ -7,16 +7,19 @@
 ###
 
 function f_s_init(){
-	# def vars
-	handle="resize and rename Janicka's JPGs"
-	script_name=$0
-	N_INPUT_ARGS=$#
-	EXP_ARGS=0
-	
-	ERR=0
-	
-	USAGE=1
-	
+  # def vars
+  handle="resize and rename Janicka's JPGs"
+  script_name=$0
+  N_INPUT_ARGS=$#
+  EXP_ARGS=0
+  
+  ERR=0
+  
+  USAGE=1
+  
+  SIPS=/usr/bin/sips
+  FFMPEG=/usr/bin/ffmpeg
+  
   max_pixels=1024
   ext=JPG
   mov_ext=MOV
@@ -35,7 +38,7 @@ function f_s_init(){
   LOG_LEVEL="d"
   if [ ! -d /opt/generic_bash_functions ];then
     echo "/opt/generic_bash_functions not found, attemting to clone from lanthean's github"
-	cd /opt
+  cd /opt
     sudo git clone https://github.com/lanthean/generic_bash_functions.git
     cd $path
     sudo chown -R $USER:staff /opt/generic_bash_functions
@@ -45,30 +48,30 @@ function f_s_init(){
     exit 1
   fi
   source /opt/generic_bash_functions/generic_bash_functions
-	}
+  }
 function f_s_bo() {
   echo "  -"
-	}
+  }
 function f_s_eo() {
-	if [[ $USAGE == 1 ]];then
-		# if f_s_usage called, do not print eof
-		echo "  -"
-	fi
-	}
+  if [[ $USAGE == 1 ]];then
+    # if f_s_usage called, do not print eof
+    echo "  -"
+  fi
+  }
 function f_s_usage() {
 
-	USAGE=0	# Usage is called, do not print eof
+  USAGE=0	# Usage is called, do not print eof
 
   log i " -"
   log i "| Usage $script_name -i /path/to/ (org) [--rename_jpeg (only rename *.jpeg files to *.$ext)] [--mov (only convert MOV files)] [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
   log i "| - note that /path/to/rs is relative to /path/to/ (org) (not configurable)"
   log i " --"
-	}
+  }
 function f_get_options(){
-	#'Options manager: get arguments from cli and parse them'
-	while [[ $# -ge 1 ]]	# -ge (greater or equal) because of --help (does not have pair = therefore in that case $# will be equal to 1)
+  #'Options manager: get arguments from cli and parse them'
+  while [[ $# -ge 1 ]]	# -ge (greater or equal) because of --help (does not have pair = therefore in that case $# will be equal to 1)
     do	#; echo "key: "$1", value: "$2", remaining number: "$#
-		if [[ $2 == "" || $2 == "-"* ]];then
+    if [[ $2 == "" || $2 == "-"* ]];then
       if [[ $1 == "--mov" ]];then
         only_mov=0
         shift
@@ -79,54 +82,54 @@ function f_get_options(){
         in_place=0
         shift
       else
-  			ERR="EMPTY_VALUE"
-  			ERR_OPT=$1
-			  break
+        ERR="EMPTY_VALUE"
+        ERR_OPT=$1
+        break
       fi
-		else
-			case $1 in
-			-i|--input)
-				INPUT="$2/org"
-				OUTPUT="$2/rs"
-				shift
-				;;
-			-m|--max_pixels)
-				max_pixels="$2"
-				shift
-				;;
+    else
+      case $1 in
+      -i|--input)
+        INPUT="$2/org"
+        OUTPUT="$2/rs"
+        shift
+        ;;
+      -m|--max_pixels)
+        max_pixels="$2"
+        shift
+        ;;
       -e|--img_extension)
-				ext="$2"
-				shift
-				;;
+        ext="$2"
+        shift
+        ;;
       *)
-				# unknown option
-				ERR="UNKNOWN_OPT"
-				ERR_OPT=$@
-				;;
-			esac
-			shift # past argument or value
-		fi
-	done
-	if [[ $N_INP_ARGS == 0 ]];then
-		ERR="USAGE"
-	elif [[ $ERR == 0 ]]; then # $ERR == False
-		if [[ $INPUT == "" || $OUTPUT == "" ]]; then
-			ERR="BAD_MANDATORY"
-		else
-			# Check if $INPUT exists
-			if [[ ! -d $INPUT ]];then 
-				ERR="INPUT_NOT_A_DIRECTORY"
-			fi
-			# Check if $OUTPUT exists
-			if [[ ! -d $OUTPUT ]];then
-				ERR="OUTPUT_NOT_A_DIRECTORY"
-			fi
-		fi
-	fi
+        # unknown option
+        ERR="UNKNOWN_OPT"
+        ERR_OPT=$@
+        ;;
+      esac
+      shift # past argument or value
+    fi
+  done
+  if [[ $N_INP_ARGS == 0 ]];then
+    ERR="USAGE"
+  elif [[ $ERR == 0 ]]; then # $ERR == False
+    if [[ $INPUT == "" || $OUTPUT == "" ]]; then
+      ERR="BAD_MANDATORY"
+    else
+      # Check if $INPUT exists
+      if [[ ! -d $INPUT ]];then 
+        ERR="INPUT_NOT_A_DIRECTORY"
+      fi
+      # Check if $OUTPUT exists
+      if [[ ! -d $OUTPUT ]];then
+        ERR="OUTPUT_NOT_A_DIRECTORY"
+      fi
+    fi
+  fi
 
-	} 
+  } 
 function f_manage_err(){
-	#'Error manager: take internal error and convert it to sensible output/exit code'
+  #'Error manager: take internal error and convert it to sensible output/exit code'
   case $ERR in
   "USAGE")
     f_s_usage
@@ -158,16 +161,16 @@ function f_manage_err(){
     ;;
   esac
   log i "Please take care of above errors and run $0 again"
-	}
+  }
 function img_resize_in_place {
   log i "Resize images in place ($INPUT)"
   log d "max_pixels=$max_pixels; ext=$ext"
-  sips -Z $max_pixels $INPUT/*.$ext
+  ${SIPS} -Z $max_pixels $INPUT/*.$ext
   }
 function img_resize {
   log i "Resize images and store output in $OUTPUT"
   log d "max_pixels=$max_pixels; ext=$ext"
-  sips -Z $max_pixels $INPUT/*.$ext -o $OUTPUT/
+  ${SIPS} -Z $max_pixels $INPUT/*.$ext -o $OUTPUT/
   }
 function mov_convert {
   log i "Convert MOV files to mp4 and store output in $INPUT"
@@ -175,7 +178,7 @@ function mov_convert {
   for mov in $(ls $INPUT/*.$mov_ext);do
     mov=$(basename $mov)
     mov=${mov:0:8}
-    ffmpeg -i $INPUT/$mov.$mov_ext -vcodec $vcodec -acodec $acodec $INPUT/$mov.$vext
+    ${FFMPEG} -i $INPUT/$mov.$mov_ext -vcodec $vcodec -acodec $acodec $INPUT/$mov.$vext
     if [[ $? == 0 ]];then
       log i "Convert of $mov.$mov_ext was successfull. Deleting the original, leaving only converted $mov.$vext."
       rm -f $INPUT/$mov.$mov_ext
@@ -197,7 +200,7 @@ function rename {
       mv $INPUT/$b $INPUT/"I${b:1:${#b}}"
     fi
   done
-	}
+  }
 function rename_jpeg {
   log i "Rename Whatsapp's jpeg"
   oIFS=$IFS
@@ -210,10 +213,11 @@ function rename_jpeg {
   done
   IFS=$oIFS
   }
+
+
 #@run the code
 f_s_init $@
 f_s_bo
-
 ##
 # If f_get_options used:
 f_get_options $@

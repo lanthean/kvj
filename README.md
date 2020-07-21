@@ -3,7 +3,7 @@ Lodni denik template + rename/resize script to manage photos
 
 ## Usage
 ```sh
-Usage $script_name -i /path/to/ (org)
+Usage $script_name -i /path/to/
 					[--rename_jpeg (only rename *.jpeg files to *.$ext)]
 					[--mov (only convert MOV files)]
 					[-m (--max_pixels) [1024] ${max_pixels}]
@@ -13,13 +13,13 @@ Usage $script_name -i /path/to/ (org)
 
 Example of usage:
 ```
- ./resize -i /kvj/2020_PT_Vltava/den_01/
- # input: /kvj/2020__PT_Vltava/den_01/org
- # resized output: /kvj/2020__PT_Vltava/den_01/rs
+./resize -i /kvj/2020_PT_Vltava/den_01/
+# input: /kvj/2020__PT_Vltava/den_01/org/*.JPG
+# resized output: /kvj/2020__PT_Vltava/den_01/rs/
 ```
 
 ### input
-/path/to/org
+/path/to/\[org\]
 path to original photos
 
 ### rename_jpeg
