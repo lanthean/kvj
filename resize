@@ -63,8 +63,13 @@ function f_s_usage() {
   USAGE=0	# Usage is called, do not print eof
 
   log i " -"
-  log i "| Usage $script_name -i /path/to/ (org) [--rename_jpeg (only rename *.jpeg files to *.$ext)] [--mov (only convert MOV files)] [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
-  log i "| - note that /path/to/rs is relative to /path/to/ (org) (not configurable)"
+  if [[ $LANG == "cs_CZ"* ]];then
+    log i "| Použití $script_name -i /cesta/k/ (org) [--rename_jpeg pouze přejmenuje *.jpeg soubory na *.$ext] [--mov pouze převeď MOV soubory] [-m (--max_pixels) maximalní počet pixelů, sířky nebo výšky [1024]] [-e (--img_extension) přípona obrazových souborů [JPG]]"
+    log i "| - poznámka: cesta /cesta/k/rs je relativní k /cesta/k/ (org) (nelze nastavit)"
+  else
+    log i "| Usage $script_name -i /path/to/ (org) [--rename_jpeg (only rename *.jpeg files to *.$ext)] [--mov (only convert MOV files)] [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
+    log i "| - note that /path/to/rs is relative to /path/to/ (org) (not configurable)"
+  fi
   log i " --"
   }
 function f_get_options(){
@@ -135,32 +140,64 @@ function f_manage_err(){
     f_s_usage
     ;;
   "UNKNOWN_OPT")
-    log e "Unknown option used, please verify your syntax."
-    log e "Input arguments used: "$@
-    log e "Unknown argument: "$ERR_OPT
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Neznámý vstupní argument, prosím zkontrolujte správnost vašeho zadání."
+      log e "Použité vstupní argumenty: "$@
+      log e "Neznámý argument: "$ERR_OPT
+    else
+      log e "Unknown option used, please verify your syntax."
+      log e "Input arguments used: "$@
+      log e "Unknown argument: "$ERR_OPT
+    fi
     f_s_usage
     ;;
   "BAD_MANDATORY")
-    log e "Some mandatory parameter is missing, please consult usage."
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Některý povinný parametr chybí."
+    else
+      log e "Some mandatory parameter is missing, please consult usage."
+    fi
     f_s_usage
     ;;
   "EMPTY_VALUE")
-    log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Chybí hodnota u vstupního parametru: $ERR_OPT"
+    else
+      log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
+    fi
     f_s_usage
     ;;
   "INPUT_NOT_A_DIRECTORY")
-    log e "$INPUT path does not exist. Check your INPUT directory."
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "$INPUT cesta neexistuje. Zkontrolujte prosím INPUT adresář."
+    else
+      log e "$INPUT path does not exist. Check your INPUT directory."
+    fi
     ;;
   "OUTPUT_NOT_A_DIRECTORY")
-    log w "$OUTPUT path does not exist. Creating it for you."
-    [ $(mkdir $OUTPUT) ] && log i "$OUTPUT created"
+    if [[ $LANG == "cs_CZ"* ]];then
+      log w "$OUTPUT cesta neexistuje. Vytvářím ji pro Vás."
+      [ $(mkdir $OUTPUT) ] && log i "$OUTPUT vytvořen"
+    else
+      log w "$OUTPUT path does not exist. Creating it for you."
+      [ $(mkdir $OUTPUT) ] && log i "$OUTPUT created"
+    fi
     ;;
   *)
-    log e "Unknown error."
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Neznámá chyba."
+    else
+      log e "Unknown error."
+    fi
     f_s_usage
     ;;
   esac
-  log i "Please take care of above errors and run $0 again"
+  if [[ $LANG == "cs_CZ"* ]];then
+    log i "Prosím opravte chyby nahoře a spusťte $0 znovu"
+  else
+    log i "Please take care of above errors and run $0 again"
+  fi
+
   }
 function img_resize_in_place {
   log i "Resize images in place ($INPUT)"
