@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/local/bin/bash
 ###
 # @Author	Martin Bortel <martin.bortel@gmail.com>
 # @Created	11/07/2020
@@ -42,10 +42,6 @@ function f_s_init(){
     sudo git clone https://github.com/lanthean/generic_bash_functions.git
     cd $path
     sudo chown -R $USER:staff /opt/generic_bash_functions
-  fi
-  if [ ! -d /opt/generic_bash_functions ];then
-    echo "ERR: github failed"
-    exit 1
   fi
   source /opt/generic_bash_functions/generic_bash_functions
   }
