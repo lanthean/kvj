@@ -8,7 +8,7 @@
 
 function f_s_init(){
   # def vars
-  handle="resize and rename Janicka's JPGs"
+  handle="resize and rename Janicka's JPGs and *.jpeg files"
   script_name=$0
   N_INPUT_ARGS=$#
   EXP_ARGS=0
