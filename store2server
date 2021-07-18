@@ -1,0 +1,279 @@
+#!/usr/local/bin/bash
+###
+# @Author   Martin Bortel <martin.bortel@gmail.com>
+# @Created  117/07/2021
+# 
+# @Package  bash_scripts
+###
+
+function f_s_init(){
+  # def vars
+  handle="store org images and videos to mb"
+  script_name=$0
+  N_INPUT_ARGS=$#
+  EXP_ARGS=0
+  
+  ERR=0
+  
+  USAGE=1
+  
+  SIPS=/usr/bin/sips
+  FFMPEG=/opt/homebrew/bin/ffmpeg
+  
+  max_pixels=1900
+  ext=JPG
+  mov_ext=MOV
+  vext=mp4
+  vcodec=h264
+  acodec=aac
+  
+  in_place=1
+  only_mov=1
+  rename_jpeg=1
+
+  ##
+  # Init generic functions
+  path=$(pwd)
+  # LOG_FILE=/path/to/log/file
+  LOG_LEVEL="d"
+  if [ ! -d /opt/generic_bash_functions ];then
+    echo "/opt/generic_bash_functions not found, attemting to clone from lanthean's github"
+  cd /opt
+    sudo git clone https://github.com/lanthean/generic_bash_functions.git
+    cd $path
+    sudo chown -R $USER:staff /opt/generic_bash_functions
+  fi
+  source /opt/generic_bash_functions/generic_bash_functions
+  }
+function f_s_bo() {
+  echo "  -"
+  }
+function f_s_eo() {
+  if [[ $USAGE == 1 ]];then
+    # if f_s_usage called, do not print eof
+    echo "  -"
+  fi
+  }
+function f_s_exit() {
+  # $1 - return value
+  f_s_eo
+  exit $1
+}
+function f_s_usage() {
+
+  USAGE=0   # Usage is called, do not print eof
+
+  log i " -"
+  if [[ $LANG == "cs_CZ"* ]];then
+    log i "| Použití $script_name -i /cesta/k/ (org) [--rename_jpeg pouze přejmenuje *.jpeg soubory na *.$ext] [--mov pouze převeď MOV soubory] [-m (--max_pixels) maximalní počet pixelů, sířky nebo výšky [1024]] [-e (--img_extension) přípona obrazových souborů [JPG]]"
+    log i "| - poznámka: cesta /cesta/k/rs je relativní k /cesta/k/ (org) (nelze nastavit)"
+  else
+    log i "| Usage $script_name -i /path/to/ (org) [--rename_jpeg (only rename *.jpeg files to *.$ext)] [--mov (only convert MOV files)] [-m (--max_pixels) [1024]] [-e (--img_extension) [JPG]]"
+    log i "| - note that /path/to/rs is relative to /path/to/ (org) (not configurable)"
+  fi
+  log i " --"
+  }
+function f_get_options(){
+  #'Options manager: get arguments from cli and parse them'
+  while [[ $# -ge 1 ]]  # -ge (greater or equal) because of --help (does not have pair = therefore in that case $# will be equal to 1)
+    do  #; echo "key: "$1", value: "$2", remaining number: "$#
+    if [[ $2 == "" || $2 == "-"* ]];then
+      if [[ $1 == "--mov" ]];then
+        only_mov=0
+        shift
+      elif [[ $1 == "--rename_jpeg" ]];then
+        rename_jpeg=0
+        shift
+      else
+        ERR="EMPTY_VALUE"
+        ERR_OPT=$1
+        break
+      fi
+    else
+      case $1 in
+      -i|--input)
+        INPUT="/Users/lanthean/KVJ/$(date +%Y)/$2/denik"
+        OUTPUT="/Users/lanthean/mnt/mb_data2/KVJ/$2"
+        shift
+        ;;
+      -m|--max_pixels)
+        max_pixels="$2"
+        shift
+        ;;
+      -e|--img_extension)
+        ext="$2"
+        shift
+        ;;
+      *)
+        # unknown option
+        ERR="UNKNOWN_OPT"
+        ERR_OPT=$@
+        ;;
+      esac
+      shift # past argument or value
+    fi
+  done
+  if [[ $N_INP_ARGS == 0 ]];then
+    ERR="USAGE"
+  elif [[ $ERR == 0 ]]; then # $ERR == False
+    if [[ $INPUT == "" || $OUTPUT == "" ]]; then
+      ERR="BAD_MANDATORY"
+    else
+      # Check if $INPUT exists
+      if [[ ! -d $INPUT ]];then 
+        ERR="INPUT_NOT_A_DIRECTORY"
+      fi
+      # Check if $OUTPUT exists
+      if [[ ! -d $OUTPUT ]];then
+        ERR="OUTPUT_NOT_A_DIRECTORY"
+      fi
+    fi
+  fi
+
+  } 
+function f_manage_err(){
+  #'Error manager: take internal error and convert it to sensible output/exit code'
+  case $ERR in
+  "USAGE")
+    f_s_usage
+    ;;
+  "UNKNOWN_OPT")
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Neznámý vstupní argument, prosím zkontrolujte správnost vašeho zadání."
+      log e "Použité vstupní argumenty: "$@
+      log e "Neznámý argument: "$ERR_OPT
+    else
+      log e "Unknown option used, please verify your syntax."
+      log e "Input arguments used: "$@
+      log e "Unknown argument: "$ERR_OPT
+    fi
+    f_s_usage
+    ;;
+  "BAD_MANDATORY")
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Některý povinný parametr chybí."
+    else
+      log e "Some mandatory parameter is missing, please consult usage."
+    fi
+    f_s_usage
+    ;;
+  "EMPTY_VALUE")
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Chybí hodnota u vstupního parametru: $ERR_OPT"
+    else
+      log e "Attribute value cannot be empty. Please correct syntax of the attribute: $ERR_OPT"
+    fi
+    f_s_usage
+    ;;
+  "INPUT_NOT_A_DIRECTORY")
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "$INPUT cesta neexistuje. Zkontrolujte prosím INPUT adresář."
+    else
+      log e "$INPUT path does not exist. Check your INPUT directory."
+    fi
+    ;;
+  "OUTPUT_NOT_A_DIRECTORY")
+    if [[ $LANG == "cs_CZ"* ]];then
+      log w "$OUTPUT cesta neexistuje. Vytvářím ji pro Vás."
+      [ $(mkdir -p $OUTPUT) ] && log i "$OUTPUT vytvořen"
+    else
+      log w "$OUTPUT path does not exist. Creating it for you."
+      [ $(mkdir -p $OUTPUT) ] && log i "$OUTPUT created"
+    fi
+    ;;
+  *)
+    if [[ $LANG == "cs_CZ"* ]];then
+      log e "Neznámá chyba."
+    else
+      log e "Unknown error."
+    fi
+    f_s_usage
+    ;;
+  esac
+  if [[ $LANG == "cs_CZ"* ]];then
+    log i "Prosím opravte chyby nahoře a spusťte $0 znovu"
+  else
+    log i "Please take care of above errors and run $0 again"
+  fi
+
+  }
+function rename_jpeg {
+  log i "Rename Whatsapp's jpeg"
+  oIFS=$IFS
+  IFS=$'\n'
+  log d "ls -d $INPUT/{01,02,03,04,05,06,07}_den"
+  for d in $(ls -d $INPUT/{01,02,03,04,05,06,07}_den); do
+    if [ $(ls $d/org/*.jpeg > /dev/null 2>&1 | wc -l) -eq 0 ]; then
+      log d "NO jpeg files in $d/org/"
+      continue
+    fi
+    for f in $(ls $d/org/*.jpeg);do
+      filename="${f##*/}"
+      basename="${filename%.*}"
+      log d "${f} > $d/org/$basename.$ext"
+      mv "$f" "$d/org/$basename.$ext"
+    done
+  done
+  IFS=$oIFS
+  }
+function img_resize {
+  log i "Resize images and store output in $OUTPUT"
+  log d "max_pixels=$max_pixels; ext=$ext"
+  for d in $(ls -d $INPUT/{01,02,03,04,05,06,07}_den); do
+    day=$(basename $d)
+    if [ ! -d $OUTPUT/$day/fotky ];then
+      log d "creating $OUTPUT/$day/fotky"
+      mkdir -p $OUTPUT/$day/fotky
+    fi
+    log d "converting $d/org/*.$ext - output to $OUTPUT/$day/fotky/"
+    ${SIPS} -Z $max_pixels $d/org/*.$ext -o $OUTPUT/$day/fotky/
+  done
+  }
+function mov_convert {
+  log i "Convert MOV files to mp4 and store output in $INPUT and store converted to $OUTPUT/*_den/video/"
+  log d "codec=$codec; ext=$mov_ext"
+  for d in $(ls -d $INPUT/{01,02,03,04,05,06,07}_den); do
+    day=$(basename $d)
+    if [ -d $d/video ];then
+      if [ ! -d $OUTPUT/$day/video/ ];then
+        log d "creating $OUTPUT/$day/video"
+        mkdir -p $OUTPUT/$day/video
+      fi
+      log d "converting $d/video/*.$mov_ext"
+      for mov in $(ls $d/video/*.$mov_ext);do
+        mov=$(basename $mov)
+        mov=${mov:0:8}
+        ${FFMPEG} -i $d/video/$mov.$mov_ext -vcodec $vcodec -acodec $acodec $d/video/$mov.$vext
+        if [[ $? == 0 ]];then
+          log d "Convert of $d/video/$mov.$mov_ext was successfull. Moving the converted $mov.$vext to $OUTPUT/$day/video/."
+          mv $d/video/$mov.$vext $OUTPUT/$day/video/
+        else
+          log e "Convert of $d/$mov.$mov_ext failed."
+        fi
+      done
+    fi
+  done
+  }
+
+
+#@run the code
+f_s_init $@
+f_s_bo
+##
+# If f_get_options used:
+log w "Did You mount 'mb_data2' (mbdata2-mount)?"
+read -p "Proceed? [Y/n] " yn
+if [ "x$yn" == "x" ]; then yn=Y; fi
+if [ $yn == "n" ];then f_s_exit 1; fi
+
+f_get_options $@
+if [[ $ERR == 0 ]];then    
+    rename_jpeg
+    img_resize    
+    mov_convert
+else
+  f_manage_err
+fi
+f_s_eo
+#EOF
+###
